@@ -1,0 +1,56 @@
+Vrancea Oana Roxana, 322 CD
+
+Pentru implementarea temei am folosit scheletul laboratorului 8.
+
+In fisierul "helpers.h" am declarat structurile urmatoare:
+	-message_from_udp: in aceasta structura am incercat sa retin
+	maesajul pe care serverul il primeste de la un client UDP.
+	Contine campurile topic, data_type si content de dimensiunile
+	specificate in enuntul temei.
+	-notification: structura in care se salveaza mesajul convertit
+	primit de la clientul udp, care va fi trimis prin intermediul
+	serverului la clientii TCP abonati la un topic anume.
+	-subscription: reprezinta mesajul pe care un client TCP il poate
+	trimite serverului, contine topicul la care se aboneaza,
+	parametrul sf cu care se aboneaza si parametrul "command" care
+	este setat la 1 atunci cand clientul vrea sa se aboneze la un topic, 
+	si setat la 0 atunci cand vrea sa se dezaboneze.
+	-client: structura ce reprezinta un client cu toti parametrii necesari:
+	id, socket utilizat, o variabila connected care este setata la 1 atunci
+	cand clientul este conectat, si la 0 atunci cand se deconecteaza. Structura
+	mai contine si un vector in care sunt retinute toate abonamentele pe care
+	le are si unul pentru a retine toate mesajele care i-au fost trimise atunci
+	cand clientul se deconecteaza.
+	Pe langa aceste structuri, am implementat si functia convert_udp_to_tcp,
+	care imi va converti un mesaj primit de la un client udp intr-un mesaj ce 
+	trebuie trimis clientului TCP.
+
+In "subscriber.cpp" se afla implementarea pentru clientul TCP.
+	In primul rand, se trimite id-ul clientului la server utilizand argv[1]
+	si comanda send. Se pot primi comenzi de la stdin, reprezentate de :
+	"exit" -> se inchide functionalitatea clientului respectiv
+	"subscribe topic sf" -> se aboneaza clientul la un topic cu un anumit sf
+	"unsubscribe topic" -> se dezabonaeaza clientul.
+	Pentru ultimele doua comenzi, retin intr-o structura de tip subscription
+	tipul comezii, topicul si sf-ul, dupa care o trimit la server.
+	Clientul TCP mai poate primi mesaje si din partea serverului, caz in care
+	le afiseaza.
+
+In "server.cpp" se realizeaza conexiunile intre clientii TCP si UDP.
+	1. Singura comanda pe care o poate primi de la stdin este exit,
+	caz in care se va inchide serverul.
+	2. Daca se afla pe socket-ul TCP, se accepta conexiuni de la clienti.
+	Aici verific daca exista un client, conectat sau nu, cu id-ul respectiv.
+	Daca exista, si este deconectat, clientul se reconecteaza, si i se trimit
+	toate mesajele pe care le-a primit cat timp era deconectat. Daca este deja 
+	conectat, clientul nou este inchis deoarece nu pot exista 2 clienti cu acelasi
+	id. Altfel, daca nu gasesc niciun client cu id-ul respectiv, creez un client
+	nou pe care il adaug in lista de clienti.
+	3. Daca se afla pe socketul UDP, se primeste un mesaj care trebuie convertit
+	la tipul "notification". Dupa aceasta transformare, se parcurg toti clientii,
+	iar daca acestia sunt abonati la topicul respectiv, cei conectati vor primi
+	direct mesajul, iar pentru cei deconectati care au SF-ul setat la 1 pentru topicul
+	respectiv se pastreaza mesajul in vectorul de mesaje salvate al clientului.
+	4. Se primesc mesaje de la clientii TCP. Daca se primeste subscribe sau 
+	unsubscribe, se actualizeaza vectorul de abonamente al clientului. Daca 
+	se primeste comanda exit, conexiunea cu acel client este inchisa.
